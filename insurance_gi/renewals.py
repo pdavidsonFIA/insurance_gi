@@ -12,7 +12,7 @@ df = pd.DataFrame([[ref_date, 10,10, coverage_period, 0.1] for coverage_period i
 # Daily
 from datetime import date
 import pandas as pd
-ref_date = date(2022,1,1)
+ref_date = date(2022,1,2)
 ref_date = pd.to_datetime(ref_date)
 coverage_periods = [1,3,12,36]
 projection_horizon = 84
@@ -115,13 +115,13 @@ def generate_earnings_pattern(df):
                 .interpolate('index')
                 .reindex(x.upr_idx_bom).to_list(),
             axis=1)
-        df['recognition_pattern'] = df.upr_s.apply(lambda x: [True] + (len(x)-1)*[False])
-        df['upr_x'] = df.apply(lambda x: list(zip(x.upr_idx_eom, x.upr_s, x.recognition_pattern)), axis=1)
-        df = df.drop(columns=['gwp_until', 'earnings_bop', 'earnings_eop', 'upr_idx_bom', 'upr_idx_eom', 'upr_s'])
+        df['earning_series'] = df.upr_s.apply(lambda x: list(range(len(x))))
+        df['upr_x'] = df.apply(lambda x: list(zip(x.earning_series, x.upr_idx_eom, x.upr_s)), axis=1)
+        # df = df.drop(columns=['gwp_until', 'earnings_bop', 'earnings_eop', 'upr_idx_bom', 'upr_idx_eom', 'upr_s', 'earning_series'])
 
         # df.index.name = 'temp_idx'
         df = df.explode('upr_x')
-        df[['acc_month', 'earnings_remaining',  'initial_recognition']] = pd.DataFrame(df.upr_x.to_list(), index=df.index)
+        df[['earning_period', 'acc_month', 'earnings_remaining']] = pd.DataFrame(df.upr_x.to_list(), index=df.index)
         df = df.drop(columns=['upr_x'])
         df['earnings_current'] = df.groupby(by=df.index)['earnings_remaining'].transform(
             lambda x: x.diff())
@@ -135,15 +135,15 @@ def generate_earnings_pattern(df):
         g = lambda x, y: 1 / y - 1 if x == 0 else 1 / y
         h = lambda x: x == 0
         f = lambda x: list([(i, 1 - (i + 1) / x, g(i, x), h(i)) for i in range(0, x)])
-        df['acc_months'] = df.coverage_period.apply(f)
-        df = df.explode('acc_months')
+        df['temp_series'] = df.coverage_period.apply(f)
+        df = df.explode('temp_series')
         # df[['acc_months', 'earnings_remaining']] = pd.DataFrame(df.acc_months.to_list(), index=df.index)
-        df[['acc_months', 'earnings_remaining', 'earnings_current', 'initial_recognition']] = pd.DataFrame(df.acc_months.to_list(), index=df.index)
+        df[['earning_period', 'earnings_remaining', 'earnings_current', 'initial_recognition']] = pd.DataFrame(df.temp_series.to_list(), index=df.index)
         df['acc_month'] = df.gwp_from
-        for mth in set(df['acc_months'].unique()):
-            df.loc[df.acc_months == mth, 'acc_month'] += mth
+        for mth in set(df['earning_period'].unique()):
+            df.loc[df.earning_period == mth, 'acc_month'] += mth
 
-        df = df.drop(columns=['acc_months', 'coverage_period'])
+        df = df.drop(columns=['temp_series', 'coverage_period'])
     return df
 
 

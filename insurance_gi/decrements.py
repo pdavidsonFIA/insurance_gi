@@ -1,11 +1,11 @@
 """
 This module just applies lapse/cancellations to future business
 import pandas as pd
-from insurance_gi.renewals import renewals
 ref_date = pd.Period('2022-01')
 coverage_periods = [1,3,12,36]
 projection_horizon = 84
 df = pd.DataFrame([[ref_date, 10,10, coverage_period, 0.1] for coverage_period in coverage_periods], columns=['gwp_from', 'gwp', 'contracts','coverage_period', 'lapse_rate'])
+from insurance_gi.renewals import renewals
 df = renewals(df, projection_horizon)
 
 
