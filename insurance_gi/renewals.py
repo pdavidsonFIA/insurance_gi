@@ -2,22 +2,28 @@
 Functions to project renewals of contracts based on most recent inception date
 Can be daily or monthly accuracy
 
+# Sample products: coverage_period, lapse_rate, loss_ratio, comm_ratio, gwp, contracts
+products = [[1, 0.1, 0.7, 0.2, 10, 10],
+            [3, 0.1, 1.2, 0.2, 10, 10],
+            [12, 0.1, 0.7, 0.4, 10, 10],
+            [36, 0.1, 0.7, 0.2, 10, 10]]
+
 # Monthly
 import pandas as pd
 ref_date = pd.Period('2022-01')
-coverage_periods = [1,3,12,36]
 projection_horizon = 84
-df = pd.DataFrame([[ref_date, 10,10, coverage_period, 0.1] for coverage_period in coverage_periods], columns=['gwp_from', 'gwp', 'contracts','coverage_period', 'lapse_rate'])
 
 # Daily
 from datetime import date
-import pandas as pd
 ref_date = date(2022,1,2)
 ref_date = pd.to_datetime(ref_date)
-coverage_periods = [1,3,12,36]
-projection_horizon = 84
-df = pd.DataFrame([[ref_date, 10,10, coverage_period, 0.1] for coverage_period in coverage_periods], columns=['gwp_from', 'gwp', 'contracts','coverage_period', 'lapse_rate'])
 
+df = pd.DataFrame([[ref_date, *prod] for prod in products], columns=[ 'gwp_from', 'coverage_period', 'lapse_rate', 'loss_ratio', 'comm_ratio', 'gwp', 'contracts'])
+
+import insurance_gi as gi
+df = gi.renewals(df, projection_horizon)
+df = gi.lapses(df)
+df = gi.financials(df)
 
 
 """
@@ -117,7 +123,7 @@ def generate_earnings_pattern(df):
             axis=1)
         df['earning_series'] = df.upr_s.apply(lambda x: list(range(len(x))))
         df['upr_x'] = df.apply(lambda x: list(zip(x.earning_series, x.upr_idx_eom, x.upr_s)), axis=1)
-        # df = df.drop(columns=['gwp_until', 'earnings_bop', 'earnings_eop', 'upr_idx_bom', 'upr_idx_eom', 'upr_s', 'earning_series'])
+        df = df.drop(columns=['gwp_until', 'earnings_bop', 'earnings_eop', 'upr_idx_bom', 'upr_idx_eom', 'upr_s', 'earning_series'])
 
         # df.index.name = 'temp_idx'
         df = df.explode('upr_x')
