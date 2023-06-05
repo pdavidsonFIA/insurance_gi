@@ -9,7 +9,7 @@ with open('requirements.txt', 'r') as f:
 
 setuptools.setup(
     name="insurance_gi",
-    version="0.0.1",
+    version="0.0.2",
     author="Peter Davidson",
     author_email="peterjd41@gmail.com",
     description="GI projection tools",
