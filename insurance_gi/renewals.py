@@ -133,6 +133,18 @@ def generate_earnings_pattern(df):
             lambda x: x.diff())
         df.earnings_current = df.earnings_current.fillna(df.earnings_remaining)
 
+        # df['upr_x'] = df.apply(lambda x: list(zip(x.upr_idx_eom, x.upr_s)), axis=1)
+        # df = df.drop(columns=['gwp_until', 'earnings_bop', 'earnings_eop', 'upr_idx_bom', 'upr_idx_eom', 'upr_s'])
+        #
+        # # df.index.name = 'temp_idx'
+        # df = df.explode('upr_x')
+        # df[['acc_month', 'earnings_remaining']] = pd.DataFrame(df.upr_x.to_list(), index=df.index)
+        # df = df.drop(columns=['upr_x'])
+        # df['earnings_current'] = df.groupby(by=df.index)['earnings_remaining'].transform(
+        #     lambda x: x.diff())
+        # df.earnings_current = df.earnings_current.fillna(df.earnings_remaining)
+
+
     elif df.gwp_from.dtype == 'period[M]':
         # 1/earning_pattern. Requires earning pattern to be added in prior step.
         # Build acc months series. f generates the earnings pattern for a given number of months

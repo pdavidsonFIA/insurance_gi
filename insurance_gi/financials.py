@@ -16,12 +16,12 @@ def financials(df: pd.DataFrame) -> pd.DataFrame:
     :param df:
     :return:
     """
-    # Build premium earnings
-    df['upr'] = df.gwp * df.earnings_remaining
+    # Build premium earnings -> UPR is negative as it's a liability
+    df['upr'] = - df.gwp * df.earnings_remaining
     df['d_upr'] = df.gwp * df.earnings_current
 
     # Add commission / expenses
-    df['comm'] = df.gwp * df.comm_ratio
+    df['comm'] = - df.gwp * df.comm_ratio
 
     # Only recognise gwp at start of coverage period
     df.loc[df.earning_period != 0, ['gwp', 'comm']] = 0.
@@ -41,16 +41,15 @@ def financials(df: pd.DataFrame) -> pd.DataFrame:
     df['urr'] = df.upr * df.urr_ratio
     df['d_urr'] = df.d_upr * df.urr_ratio
 
-
     # Add loss recognition: limit dac for combined ratio > 100%
-    df['combined_ratio'] = df.loss_ratio + df.comm_ratio
-    dac_limit = lambda x: min(x.comm_ratio, max(1 - x.combined_ratio, 0.))
+    dac_limit = lambda x: min(x.comm_ratio, max(1. - x.loss_ratio, 0.))
     df['dac_limit_ratio'] = df.apply(dac_limit, axis=1)
 
-    df['dac'] = df.upr * df.dac_limit_ratio
-    df['d_dac'] = df.d_upr * df.dac_limit_ratio
+    # DAC is an asset (normally) so reverse sign of UPR
+    df['dac'] = - df.upr * df.dac_limit_ratio
+    df['d_dac'] = - df.d_upr * df.dac_limit_ratio
 
 
-    df = df.drop(columns=['combined_ratio', 'dac_limit_ratio', 'urr_ratio'])
+    df = df.drop(columns=['dac_limit_ratio', 'urr_ratio', 'loss_ratio', 'comm_ratio', 'earning_period'])
 
     return df

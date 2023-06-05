@@ -18,5 +18,5 @@ def lapses(df: pd.DataFrame) -> pd.DataFrame:
     for col in columns_to_decrement:
         df[col] *= df.remaining_bop
     # Could also drop lapse_rate and ren_idx
-    df = df.drop(columns=['remaining_bop'])
+    df = df.drop(columns=['remaining_bop', 'lapse_rate'])
     return df
