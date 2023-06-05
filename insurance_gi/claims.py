@@ -47,4 +47,7 @@ def claims_runoff(df: pd.DataFrame) -> pd.DataFrame:
     df['d_ibnr'] = df.groupby(by=grping_idx)['ibnr'].diff().fillna(df.ibnr)
     df['d_resv'] = df.groupby(by=grping_idx)['resv'].diff().fillna(df.resv)
 
+    # Cleanup
+    df = df.drop(columns=['pattern', 'rep_date_idx', 'claim_s', 'incurred_s'])
+
     return df
