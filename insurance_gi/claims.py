@@ -19,6 +19,7 @@ df = pd.DataFrame([[ref_date + i, -1, pattern] for i in range(5)], columns=['acc
 
 """
 import pandas as pd
+import numpy as np
 
 
 def claims_runoff(df: pd.DataFrame) -> pd.DataFrame:
@@ -28,13 +29,39 @@ def claims_runoff(df: pd.DataFrame) -> pd.DataFrame:
     :param df:
     :return:
     """
+    original_columns = df.columns
+    claims_runoff_columms = {'claims', 'resv', 'd_claims', 'd_resv', 'ult', 'ibnr', 'd_ibnr', 'incurred'}
+    date_columns = {'rep_date', 'acc_month'}
+    # Don't want to duplicate GWP across every runoff period of the claims
+    columns_to_null_after_explode = list(set(original_columns).difference(claims_runoff_columms.union(date_columns)))
+
+    if 'acc_month' in df.index.names:
+        df = df.reset_index('acc_month')
+        acc_month_in_index = True
+    else:
+        acc_month_in_index = False
+
+    if 'claims' not in df.columns:
+        # If no initial claims set then set to 0
+        df['claims'] = 0.
+    if 'resv' not in df.columns:
+        df['resv'] = 0.
+    df['remaining_to_be_paid'] = df.ult - df.claims
+    df['incurred'] = df.claims + df.resv
+    df['remaining_to_be_reported'] = df.ult - df.incurred
+
     df = df.explode('pattern')
     df[['rep_date_idx', 'claim_s', 'incurred_s']] = pd.DataFrame(df.pattern.to_list(), index=df.index)
-    df['rep_date'] = df.acc_month + df.rep_date_idx
+    if 'rep_date' in df.columns:
+        # If running off incurred then acc_month might be in the past, only want to increment from current rep date
+        df['rep_date'] += df.rep_date_idx
+    else:
+        # Future accident months
+        df['rep_date'] = df.acc_month + df.rep_date_idx
 
     # Cumulative claims paid & reported
-    df['claims'] = df.ult * df.claim_s
-    df['incurred'] = df.ult * df.incurred_s
+    df['claims'] += df.claim_s * df.remaining_to_be_paid
+    df['incurred'] += df.incurred_s * df.remaining_to_be_reported
     df['resv'] = df.incurred - df.claims
     df['ibnr'] = df.ult - df.incurred
 
@@ -42,12 +69,16 @@ def claims_runoff(df: pd.DataFrame) -> pd.DataFrame:
     df.index.names = [f"idx{i}" if v is None else v for i, v in enumerate(df.index.names)]
     grping_idx = df.index.names + ['acc_month']
 
+    df = df.reset_index().set_index(grping_idx).sort_index()
     # Deltas for claims & reserve positions
     df['d_claims'] = df.groupby(by=grping_idx)['claims'].diff().fillna(df.claims)
     df['d_ibnr'] = df.groupby(by=grping_idx)['ibnr'].diff().fillna(df.ibnr)
     df['d_resv'] = df.groupby(by=grping_idx)['resv'].diff().fillna(df.resv)
 
     # Cleanup
-    df = df.drop(columns=['pattern', 'rep_date_idx', 'claim_s', 'incurred_s'])
+    df.loc[df.rep_date_idx != 0, columns_to_null_after_explode] = np.nan  # maybe 0. is better
+    df = df.drop(columns=['pattern', 'rep_date_idx', 'claim_s', 'incurred_s', 'remaining_to_be_paid', 'remaining_to_be_reported'])
+    if ~acc_month_in_index:
+        df = df.reset_index('acc_month')
 
     return df
