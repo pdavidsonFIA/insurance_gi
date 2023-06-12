@@ -34,7 +34,7 @@ def financials(df: pd.DataFrame) -> pd.DataFrame:
     df.exposure *= df.contracts
 
     # Apply loss ratio to earnings for ultimate loss
-    df['ult'] = df.loss_ratio * df.gep
+    df['ult'] = - df.loss_ratio * df.gep
 
     # Add loss recognition / urr for loss rations > 100%
     df['urr_ratio'] = df.loss_ratio.apply(lambda x: max(0., x - 1.))
